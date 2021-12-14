@@ -1,91 +1,117 @@
 package sorting
 
+import java.util.*
+import kotlin.math.roundToInt
+import kotlin.system.exitProcess
+
+val scanner = Scanner(System.`in`)
+
 fun main(args: Array<String>) {
-    val sort = args.contains("-sortIntegers")
-    val command =
-        if (sort) "long" else if (args.isNotEmpty() && args.size == 2 && args[0] == "-dataType") args[1] else "word"
-    val lines = generateSequence(::readLine).toList()
-
-    when (command) {
-        "long" -> numbers(lines, sort)
-        "line" -> lines(lines)
-        "word" -> words(lines)
-    }
-}
-fun numbers(lines: List<String>, sort: Boolean) {
-    val numbers = mutableListOf<Long>()
-    val max = { numbers.maxOrNull() ?: throw NumberFormatException() }
-    val count = { numbers.count { it == max() } }
-    for (line in lines) filterLine(line).map { it.toLong() }.forEach { numbers.add(it) }
-    println("Total numbers: ${numbers.size}.")
-    if (!sort) println("The greatest number: ${max()} (${count()} time(s), ${count() * 100 / numbers.size}%).") else {
-        val numSort = numbers.toTypedArray()
-        mergeSort(numSort)
-        print("Sorted data: ")
-        for (i in numSort.indices) print("${numSort[i]}" + if (i != numSort.lastIndex) " " else "")
-        println()
+    val (dataType, sortingType) = parseArgs(args)
+    when (dataType) {
+        "line" -> processLines(sortingType)
+        "word" -> processWords(sortingType)
+        "long" -> processNumbers(sortingType)
     }
 }
 
-fun lines(lines: List<String>) {
-    val max = { lines.maxByOrNull { it.length } ?: throw Exception() }
-    val count = { lines.count { it == max() } }
+fun parseArgs(args: Array<String>): Pair<String, String> {
+    if (args.size !in listOf(2, 4)) {
+        exitWithUsage()
+    }
+
+    var dataType = "word"
+    var sortingType = "natural"
+
+    for ((paramKey, paramValue) in args.asList().chunked(2)) {
+        when (paramKey) {
+            "-dataType" -> {
+                if (paramValue in listOf("long", "line", "word")) {
+                    dataType = paramValue
+                } else {
+                    exitWithUsage()
+                }
+            }
+            "-sortingType" -> {
+                if (paramValue in listOf("natural", "byCount")) {
+                    sortingType = paramValue
+                } else {
+                    exitWithUsage()
+                }
+            }
+        }
+    }
+
+    return Pair(dataType, sortingType)
+}
+
+fun exitWithUsage() {
+    println("usage: <script> -dataType [long|line|word] -sortingType [natural|byCount]")
+    exitProcess(1)
+}
+
+fun processLines(sortingType: String) {
+    val lines = mutableListOf<String>()
+    while (scanner.hasNextLine()) {
+        lines.add(scanner.nextLine())
+    }
 
     println("Total lines: ${lines.size}.")
-    println("The longest line:")
-    println(max())
-    println("(${count()} time(s), ${count() * 100 / lines.size}%).")
-}
 
-fun words(lines: List<String>) {
-    var words = mutableListOf<String>()
-    val max = { words.maxByOrNull { it.length } ?: throw Exception() }
-    val count = { words.count { it == max() } }
-    for (line in lines) filterLine(line).map { it }.forEach { words.add(it) }
-    words = words.sorted().toMutableList()
-    println("Total words: ${words.size}.")
-    println("The longest word: ${max()} (${count()} time(s), ${count() * 100 / words.size}%).")
-}
-fun filterLine(line: String) = line.replace("\\s+".toRegex(), " ").split(" ")
-fun mergeSort(numbers: Array<Long>, left: Int = 0, right: Int = numbers.lastIndex) {
-    if (left < right) {
-        val middle = (left + right) / 2
+    if (sortingType == "natural") {
+        println("Sorted data:")
+        lines.sorted().forEach { println(it) }
+    } else if (sortingType == "byCount") {
+        val comparator = compareBy<Map.Entry<String, Int>> { it.value }.thenBy { it.key }
 
-        mergeSort(numbers, left, middle)
-        mergeSort(numbers, middle + 1, right)
-        merge(numbers, left, middle, right)
-    }
-}
+        val frequencies = lines.groupingBy { it }.eachCount()
 
-fun merge(numbers: Array<Long>, left: Int, middle: Int, right: Int) {
-    val sub1 = middle - left + 1
-    val sub2 = right - middle
-    val leftTemp = Array(sub1) { 0L }
-    val rightTemp = Array(sub2) { 0L }
-    var i = 0
-    var j = 0
-    var k = left
-
-    for (i1 in 0 until sub1) leftTemp[i1] = numbers[left + i1]
-    for (j1 in 0 until sub2) rightTemp[j1] = numbers[middle + 1 + j1]
-    while (i < sub1 && j < sub2) {
-        if (leftTemp[i] <= rightTemp[j]) {
-            numbers[k] = leftTemp[i]
-            i++
-        } else {
-            numbers[k] = rightTemp[j]
-            j++
+        frequencies.entries.sortedWith(comparator).forEach {
+            val percentage = it.value.toDouble() / lines.size * 100.0
+            println("${it.key}: ${it.value} time(s), ${percentage.roundToInt()}%")
         }
-        k++
     }
-    while (i < sub1) {
-        numbers[k] = leftTemp[i]
-        i++
-        k++
+}
+
+fun processWords(sortingType: String) {
+    val words = mutableListOf<String>()
+    while (scanner.hasNext()) {
+        words.add(scanner.next())
     }
-    while (j < sub2) {
-        numbers[k] = rightTemp[j]
-        j++
-        k++
+
+    println("Total words: ${words.size}.")
+
+    if (sortingType == "natural") {
+        println("Sorted data: ${words.sorted().joinToString(" ")}")
+    } else if (sortingType == "byCount") {
+        val comparator = compareBy<Map.Entry<String, Int>> { it.value }.thenBy { it.key }
+
+        val frequencies = words.groupingBy { it }.eachCount()
+
+        frequencies.entries.sortedWith(comparator).forEach {
+            val percentage = it.value.toDouble() / words.size * 100.0
+            println("${it.key}: ${it.value} time(s), ${percentage.roundToInt()}%")
+        }
+    }
+}
+
+fun processNumbers(sortingType: String) {
+    val numbers = mutableListOf<Long>()
+    while (scanner.hasNext()) {
+        numbers.add(scanner.nextLong())
+    }
+    println("Total numbers: ${numbers.size}.")
+
+    if (sortingType == "natural") {
+        println("Sorted data: ${numbers.sorted().joinToString(" ")}")
+    } else if (sortingType == "byCount") {
+        val comparator = compareBy<Map.Entry<Long, Int>> { it.value }.thenBy { it.key }
+
+        val frequencies = numbers.groupingBy { it }.eachCount()
+
+        frequencies.entries.sortedWith(comparator).forEach {
+            val percentage = it.value.toDouble() / numbers.size * 100.0
+            println("${it.key}: ${it.value} time(s), ${percentage.roundToInt()}%")
+        }
     }
 }
