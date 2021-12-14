@@ -2,7 +2,6 @@ package sorting
 
 import java.util.*
 import kotlin.math.roundToInt
-import kotlin.system.exitProcess
 
 val scanner = Scanner(System.`in`)
 
@@ -16,38 +15,30 @@ fun main(args: Array<String>) {
 }
 
 fun parseArgs(args: Array<String>): Pair<String, String> {
-    if (args.size !in listOf(2, 4)) {
-        exitWithUsage()
-    }
-
     var dataType = "word"
     var sortingType = "natural"
 
-    for ((paramKey, paramValue) in args.asList().chunked(2)) {
-        when (paramKey) {
+    for (arg in args.withIndex()) {
+        when (arg.value) {
             "-dataType" -> {
-                if (paramValue in listOf("long", "line", "word")) {
-                    dataType = paramValue
-                } else {
-                    exitWithUsage()
+                val nextArg = if (arg.index < args.size - 1) args[arg.index + 1] else ""
+                if (nextArg in listOf("long", "line", "word")) {
+                    dataType = nextArg
                 }
             }
             "-sortingType" -> {
-                if (paramValue in listOf("natural", "byCount")) {
-                    sortingType = paramValue
-                } else {
-                    exitWithUsage()
+                val nextArg = if (arg.index < args.size - 1) args[arg.index + 1] else ""
+                if (nextArg in listOf("natural", "byCount")) {
+                    sortingType = nextArg
                 }
             }
+            in listOf("long", "line", "word") -> continue // already consumed above
+            in listOf("natural", "byCount") -> continue // already consumed above
+            else -> println("\"$arg\" is not a valid parameter. It will be skipped.")
         }
     }
 
     return Pair(dataType, sortingType)
-}
-
-fun exitWithUsage() {
-    println("usage: <script> -dataType [long|line|word] -sortingType [natural|byCount]")
-    exitProcess(1)
 }
 
 fun processLines(sortingType: String) {
